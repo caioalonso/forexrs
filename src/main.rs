@@ -1,6 +1,8 @@
+extern crate clap;
+extern crate time;
 use std::fs::File;
 use std::io::prelude::*;
-extern crate time;
+use clap::{App, Arg};
 
 #[derive(Debug)]
 struct Tick {
@@ -12,20 +14,32 @@ struct Tick {
 }
 
 fn main() {
-    let mut file =
-        File::open("/home/caio/dev/forex/tick/short.csv").expect("Failed to open CSV file.");
+    let matches = App::new("forexrs")
+        .version("0.0.1")
+        .arg(
+            Arg::with_name("CSV")
+                .help("Sets the CSV file to use")
+                .required(true)
+                .index(1),
+        )
+        .get_matches();
+    let csv = matches.value_of("CSV").unwrap();
+    let ticks = parse_csv(csv);
+}
+
+fn parse_csv(filestr: &str) -> Vec<Tick> {
     let mut s = String::new();
-    file.read_to_string(&mut s).expect("Couldn't read file");
-    let ticks: Vec<Tick> = s.lines().filter_map(parse_line).collect();
-    println!("{:#?}", ticks);
+    File::open(filestr)
+        .expect("a CSV file")
+        .read_to_string(&mut s)
+        .expect("Couldn't read file");
+    s.lines().filter_map(parse_line).collect()
 }
 
 fn parse_line(line: &str) -> Option<Tick> {
     let items: Vec<&str> = line.split(',').collect();
-    let time = time::strptime(items[0], "%Y-%m-%d %H:%M:%S.%f");
-    match time {
-        Ok(t) => {
-            let time = t;
+    match time::strptime(items[0], "%Y-%m-%d %H:%M:%S.%f") {
+        Ok(time) => {
             let ask = items[1].parse::<f32>().unwrap();
             let bid = items[2].parse::<f32>().unwrap();
             let ask_volume = items[3].parse::<u32>().unwrap();
@@ -40,4 +54,9 @@ fn parse_line(line: &str) -> Option<Tick> {
         }
         Err(_) => None,
     }
+}
+
+#[test]
+fn test_something() {
+    panic!("sei la");
 }

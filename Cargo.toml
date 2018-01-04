@@ -5,3 +5,4 @@ authors = ["Caio Alonso <caio@caioalonso.com>"]
 
 [dependencies]
 time = "0.1.38"
+clap = "2.29.0"
