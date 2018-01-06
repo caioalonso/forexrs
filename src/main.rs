@@ -13,6 +13,29 @@ struct Tick {
     bid_volume: u32,
 }
 
+#[derive(Debug)]
+struct Candle {
+    time: time::Tm,
+    o: f32,
+    h: f32,
+    l: f32,
+    c: f32,
+    volume: u32,
+}
+
+impl Candle {
+    fn new(time: time::Tm, price: f32, volume: u32) -> Candle {
+        Candle {
+            time,
+            o: price,
+            h: price,
+            l: price,
+            c: price,
+            volume
+        }
+    }
+}
+
 fn main() {
     let matches = App::new("forexrs")
         .version("0.0.1")
@@ -25,6 +48,10 @@ fn main() {
         .get_matches();
     let csv = matches.value_of("CSV").unwrap();
     let ticks = parse_csv(csv);
+    let mut candles: Vec<Candle> = Vec::new();
+    for tick in ticks {
+        candles = update_candles(&candles, tick);
+    }
 }
 
 fn parse_csv(filestr: &str) -> Vec<Tick> {
@@ -53,6 +80,18 @@ fn parse_line(line: &str) -> Option<Tick> {
             })
         }
         Err(_) => None,
+    }
+}
+
+fn update_candles(mut candles: Vec<Candle>, tick: Tick) {
+    match candles.pop() {
+        None => candles.push(Candle::new(tick.time, tick.bid, tick.bid_volume)),
+        Some(c) if c.time < tick.time => {
+            c.update_price(tick.bid);
+            candles.push(c)
+        }
+        Some(c) => {
+        }
     }
 }
 
