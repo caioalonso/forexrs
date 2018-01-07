@@ -24,15 +24,27 @@ struct Candle {
 }
 
 impl Candle {
-    fn new(time: time::Tm, price: f32, volume: u32) -> Candle {
+    fn new(tick: Tick) -> Candle {
+        let mut time = tick.time.clone();
+        time.tm_sec = 0;
+        time.tm_nsec = 0;
         Candle {
             time,
-            o: price,
-            h: price,
-            l: price,
-            c: price,
-            volume
+            o: tick.bid,
+            h: tick.bid,
+            l: tick.bid,
+            c: tick.bid,
+            volume: tick.bid_volume,
         }
+    }
+
+    fn update_price(&mut self, bid: f32) {
+        if self.h < bid {
+            self.h = bid;
+        } else if self.l > bid {
+            self.l = bid;
+        }
+        self.c = bid;
     }
 }
 
@@ -48,10 +60,12 @@ fn main() {
         .get_matches();
     let csv = matches.value_of("CSV").unwrap();
     let ticks = parse_csv(csv);
+    let duration = time::Duration::minutes(1);
     let mut candles: Vec<Candle> = Vec::new();
     for tick in ticks {
-        candles = update_candles(&candles, tick);
+        candles = update_candles(candles, tick, duration);
     }
+    
 }
 
 fn parse_csv(filestr: &str) -> Vec<Tick> {
@@ -83,16 +97,23 @@ fn parse_line(line: &str) -> Option<Tick> {
     }
 }
 
-fn update_candles(mut candles: Vec<Candle>, tick: Tick) {
+fn update_candles(mut candles: Vec<Candle>, tick: Tick, duration: time::Duration) -> Vec<Candle> {
     match candles.pop() {
-        None => candles.push(Candle::new(tick.time, tick.bid, tick.bid_volume)),
-        Some(c) if c.time < tick.time => {
-            c.update_price(tick.bid);
-            candles.push(c)
-        }
-        Some(c) => {
+        None => {
+            candles.push(Candle::new(tick))
+        },
+        Some(mut candle) => {
+            // if tick is inside candle
+            if candle.time + duration > tick.time {
+                candle.update_price(tick.bid);
+                candles.push(candle);
+            } else {
+                candles.push(candle);
+                candles.push(Candle::new(tick));
+            }
         }
     }
+    candles
 }
 
 #[test]
