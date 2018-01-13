@@ -1,72 +1,10 @@
 extern crate time;
 use std::fs::File;
 use std::io::prelude::*;
-
-#[derive(Debug)]
-struct Tick {
-    time: time::Tm,
-    ask: f32,
-    bid: f32,
-    ask_volume: u32,
-    bid_volume: u32,
-}
-
-impl Tick {
-    fn new(line: &str) -> Option<Tick> {
-        let items: Vec<&str> = line.split(',').collect();
-        match time::strptime(items[0], "%Y-%m-%d %H:%M:%S.%f") {
-            Ok(time) => {
-                let ask = items[1].parse::<f32>().unwrap();
-                let bid = items[2].parse::<f32>().unwrap();
-                let ask_volume = items[3].parse::<u32>().unwrap();
-                let bid_volume = items[4].parse::<u32>().unwrap();
-                Some(Tick {
-                    time,
-                    ask,
-                    bid,
-                    ask_volume,
-                    bid_volume,
-                })
-            }
-            Err(_) => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Candle {
-    time: time::Tm,
-    o: f32,
-    h: f32,
-    l: f32,
-    c: f32,
-    volume: u32,
-}
-
-impl Candle {
-    fn new(tick: Tick) -> Candle {
-        let mut time = tick.time.clone();
-        time.tm_sec = 0;
-        time.tm_nsec = 0;
-        Candle {
-            time,
-            o: tick.bid,
-            h: tick.bid,
-            l: tick.bid,
-            c: tick.bid,
-            volume: tick.bid_volume,
-        }
-    }
-
-    fn update_price(&mut self, bid: f32) {
-        if self.h < bid {
-            self.h = bid;
-        } else if self.l > bid {
-            self.l = bid;
-        }
-        self.c = bid;
-    }
-}
+mod candle;
+mod tick;
+use candle::*;
+use tick::*;
 
 pub fn run(csv: &str) {
     let ticks = parse_csv(csv);
